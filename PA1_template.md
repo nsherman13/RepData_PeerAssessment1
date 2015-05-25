@@ -11,8 +11,25 @@ I used read.csv() with default values to load the raw activity data.
 
 ```r
 library(knitr)
+library(ggplot2)
 opts_chunk$set(echo = TRUE)
 library(dplyr)
+```
+
+```
+## 
+## Attaching package: 'dplyr'
+## 
+## The following object is masked from 'package:stats':
+## 
+##     filter
+## 
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+```
+
+```r
 raw_data <- read.csv("activity.csv")
 ```
 
@@ -152,16 +169,12 @@ qplot(Group.1,x,
       ylab = "Steps",
       main = "Average Activity Steps per Interval",
       facets = Group.2~.,
-       geom = c("point","smooth")
+       geom = c("line","smooth")
       )
 ```
 
-```
-## geom_smooth: method="auto" and size of largest group is <1000, so using loess. Use 'method = x' to change the smoothing method.
-## geom_smooth: method="auto" and size of largest group is <1000, so using loess. Use 'method = x' to change the smoothing method.
-```
-
 ![plot of chunk unnamed-chunk-11](figure/unnamed-chunk-11-1.png) 
+
 It seems like the is less volatile over the weekends and the 
 mean seems slightly more centered towards the afternoon on the weekends. This
 makes sense as people go out to the beach and other leisurely activities.
