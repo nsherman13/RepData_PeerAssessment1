@@ -28,6 +28,12 @@ mean_steps_per_day <- aggregate(clean_data$steps,by = list(clean_data$date),FUN 
 median_steps_per_day <- aggregate(clean_data$steps,by = list(clean_data$date),FUN = median)
 ```
 
+Here are the calculated mean and median steps per day.
+```{r}
+mean_steps_per_day
+median_steps_per_day
+```
+
 Here is the histogram representing the frequencies of total steps taken per day.
 ```{r}
 hist(total_steps_per_day$x,
@@ -85,8 +91,15 @@ imputted_mean_steps_per_day <- aggregate(imputted_data$Steps,by = list(imputted_
 imputted_median_steps_per_day <- aggregate(imputted_data$Steps,by = list(imputted_data$Date),FUN = median)
 ```
 
+Here are the imputted mean and median steps per day.
+```{r}
+imputted_mean_steps_per_day
+imputted_median_steps_per_day
+```
+
 * Comparision to non complete dataset
 
+Here is a histogram for the dataset with imputted values.
 ```{r}
 hist(imputted_total_steps_per_day$x,
      main = "Histogram of  Imputted Total Steps taken per day",
@@ -138,7 +151,7 @@ qplot(Group.1,x,
 
 It seems like the is less volatile over the weekends and the 
 mean seems slightly more centered towards the afternoon on the weekends. This
-makes sense as people go out to the beach and other leisurely activities.
+makes sense as people go out to the beach and other places.
 
 
 
