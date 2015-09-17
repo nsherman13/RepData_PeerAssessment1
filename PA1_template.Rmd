@@ -1,157 +1,144 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Reproducible Research"
+author: "Nitzan Sherman"
+output: html_document
 ---
 
-## Loading and preprocessing the data
-I used read.csv() with default values to load the raw activity data.
+### Loading and preprocessing the data
+I loaded knitr as needed and will be using dplyr and ggplot2 for my analysis and visualizations respectively.
 
 ```{r}
 library(knitr)
-library(ggplot2)
-opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(ggplot2)
+opts_chunk$set(echo = TRUE,messages = FALSE)
+```
+
+I didn't do anything fancy to read the data. I used read.csv and converted data frame into tbl_df for use with the dplyr package. Before converting, I ensured that date column was changed to a date.
+
+```{r}
 raw_data <- read.csv("activity.csv")
+raw_data$date <- as.character(raw_data$date)
+raw_data$date <- as.Date(raw_data$date)
 ```
 
-## What is the mean total number of steps taken per day?
-
-My first step was to remove all NA values from the raw_data. I used complete.cases() to do this particular task.
-I calculated the sum per day, the mean per day and the median per day by aggregating data by date.
+## What is mean total number of steps taken per day?
 
 ```{r}
-clean_data <- raw_data[complete.cases(raw_data$steps),]
-total_steps_per_day <- aggregate(clean_data$steps,by = list(clean_data$date),FUN = sum)
-mean_steps_per_day <- aggregate(clean_data$steps,by = list(clean_data$date),FUN = mean)
-median_steps_per_day <- aggregate(clean_data$steps,by = list(clean_data$date),FUN = median)
+#filters out all NA values by running complete cases on entire tbl_df.
+complete_data <- raw_data %>% filter(complete.cases(.))
 ```
 
-Here are the calculated mean and median steps per day.
+Below are the calculated total steps, mean and median per day.
 ```{r}
-mean_steps_per_day
-median_steps_per_day
+total_steps_per_day <- summarise(group_by(complete_data,date), steps = sum(steps))
 ```
 
-Here is the histogram representing the frequencies of total steps taken per day.
 ```{r}
-hist(total_steps_per_day$x,
-     main = "Histogram of Total Steps taken per day",
-     xlab = "Total Steps per day",
-     ylab = "Frequency",
-     col = "blue",
-     breaks = 10
-    )
+qplot(total_steps_per_day$steps,
+      geom="histogram",
+      binwidth = range(total_steps_per_day$steps)[2] / 10,
+      main = "Histogram of Total Steps per Day",
+      xlab = "Total Steps",
+      ylab = "Count",
+      fill = I("dark grey"),
+      col = I("black")
+      )
 ```
+
+Here are the calculated mean and medians steps per day.
+
+```{r}
+mean_per_day <- summarise(group_by(complete_data,date),mean(steps))
+median_per_day <- summarise(group_by(complete_data,date), median(steps))
+```
+
 
 ## What is the average daily activity pattern?
 
-I used a similar strategy to calculate the average steps taken per interval across all days. 
-I aggregated data by interval instead of date.
+In
 
 ```{r}
-mean_steps_per_interval <- aggregate(clean_data$steps,by = list(clean_data$interval),FUN = mean)
-plot(y = mean_steps_per_interval$x, 
-     x = mean_steps_per_interval$Group.1,
-     type = "l",
-     main = "Average Steps taken per Interval",
-     xlab = "Time interval",
-     ylab = "Steps")
+mean_per_interval <- summarise(group_by(complete_data,interval), 
+                           avg = mean(steps))
 ```
 
-* Maximum Steps
+Here is the resulting chart.
+```{r}
+ggplot(data=mean_per_interval, aes(x=interval, y=avg)) +
+    geom_line()
+```
 
-The maximum value is 206 steps and this occurs at 835 am. This makes sense, as at that time many people are rushing
-out the door to catch transportation to work. Alternatively, they could be moving around the house making sure they
-are prepared to leave.
+In order to find the max value, I used the top_n function. The highest average value was at 8:35 am with about 206 steps. 
+
+```{r}
+top_n(mean_per_interval,1,avg)
+```
 
 ## Imputing missing values
 
-* Total number of missing values
+* Sum of Missing Values
+
+The sum of missing values is equivalent to the difference in rows between raw data and complete data. The value is 2304.
 
 ```{r}
-sum(is.na(raw_data$steps))
-````
-
-* Strategy for replacing missing values
-
-I wanted to replace missing values with the mean steps taken per that time interval. In order to 
-do that, I appended the mean_steps_per_interval column to raw data. I renamed columns and then used 
-mutate with an ifelse to properly populate missing values.
-
-* Creating new dataset
-
-```{r}
-imputted_data <- cbind(raw_data,mean_steps_per_interval$x)
-colnames(imputted_data) <- c("Steps","Date","Interval","Mean.Steps")
-imputted_data <- mutate(imputted_data,Steps = ifelse(is.na(Steps),Mean.Steps,Steps))
-imputted_total_steps_per_day <- aggregate(imputted_data$Steps,by = list(imputted_data$Date),FUN = sum)
-imputted_mean_steps_per_day <- aggregate(imputted_data$Steps,by = list(imputted_data$Date),FUN = mean)
-imputted_median_steps_per_day <- aggregate(imputted_data$Steps,by = list(imputted_data$Date),FUN = median)
+nrow(raw_data) - nrow(complete_data)
 ```
 
-Here are the imputted mean and median steps per day.
+* Imputing Values Strategy
+
+My strategy is for every NA value, to replace it with the mean steps taken for that time period. In order to do this, I combined my raw data with the mean_per_interval avg column. I used mutate to then fill out any value that was NA with the average steps.
+
+
 ```{r}
-imputted_mean_steps_per_day
-imputted_median_steps_per_day
+imputed_data <- cbind(raw_data, avg = mean_per_interval$avg)
+imputed_data <- mutate(imputed_data,steps = ifelse(is.na(steps),avg,steps))
 ```
 
-* Comparision to non complete dataset
-
-Here is a histogram for the dataset with imputted values.
 ```{r}
-hist(imputted_total_steps_per_day$x,
-     main = "Histogram of  Imputted Total Steps taken per day",
-     xlab = "Total Steps per day",
-     ylab = "Frequency",
-     col = "blue",
-     breaks = 10,
-    )
+imputed_total_steps_per_day <- summarise(group_by(imputed_data,date), steps = sum(steps))
+imputed_mean_per_day <- summarise(group_by(imputed_data,date),mean(steps))
+imputed_median_per_day <- summarise(group_by(imputed_data,date), median(steps))
 ```
+
+
+```{r}
+qplot(imputed_total_steps_per_day$steps,
+      geom="histogram",
+      binwidth = range(imputed_total_steps_per_day$steps)[2] / 10,
+      main = "Histogram of Total Steps per Day",
+      xlab = "Total Steps",
+      ylab = "Count",
+      fill = I("dark grey"),
+      col = I("black")
+      )
+```
+
+It seems like imputting the data has lessened the skew of the distribution. Looking at the totals, it seems as if the totals have gone up, while there have been very small changes to the mean and median per day.
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-For this question, I needed to convert the Date vector to date format.
+In order to do this analysis, I need to convert dates to day of the week, and then classify them as weekends or weekdays. I also need to calculate the average values per week day and weekend in order to plot them.
+
 ```{r}
-imputted_data$Date <- as.character(imputted_data$Date)
-imputted_data$Date <- as.Date(imputted_data$Date)
+imputed_data <- mutate(imputed_data,day = weekdays(date))
+imputed_data <- mutate(imputed_data,day_type = ifelse(day %in% c("Saturday","Sunday"),0,1))
+imputed_data$day_type <- factor(imputed_data$day_type,labels = c("weekend","weekday"))
+mean_per_interval_per_day_type <- summarise(group_by(imputed_data,day_type,interval),avg = mean(steps))
 ```
 
-
+Here is the plot comparing weekend activity to weekday activity.
 ```{r}
-imputted_data$Date <- as.character(imputted_data$Date)
-imputted_data$Date <- as.Date(imputted_data$Date)
-imputted_data$work_day <- weekdays(imputted_data$Date)
-imputted_data$week_type[imputted_data$work_day %in% 
-                      c("Monday","Tuesday","Wednesday","Thursday","Friday")] <- 0
-imputted_data$week_type[imputted_data$work_day %in% 
-                      c("Saturday","Sunday")] <- 1
-imputted_data$day_type <- factor(imputted_data$week_type,labels = c("weekday","weekend"))
-```
-
-Here is the calculation of average steps per time interval per weekdays/weekend.
-
-```{r}
-final_mean <- aggregate(imputted_data$Steps,by = list(imputted_data$Interval,imputted_data$day_type),FUN = mean)
-```
-
-Here is the graph of average steps per time interval. 
-```{r}
-qplot(Group.1,x,
-      data = final_mean,
+qplot(x = interval,
+      y = avg,
+      data = mean_per_interval_per_day_type,
       xlab = "Interval",
       ylab = "Steps",
       main = "Average Activity Steps per Interval",
-      facets = Group.2~.,
-       geom = c("line","smooth")
+      facets = day_type ~.,
+      geom = c("line","smooth")
       )
 ```
 
-It seems like the is less volatile over the weekends and the 
-mean seems slightly more centered towards the afternoon on the weekends. This
-makes sense as people go out to the beach and other places.
-
-
-
+There's a few things that stick out. Notice how weeekend activity tends to be more active in the afternoon, while early morning is where the most activity is for weekdays. This intuitively makes sense as mornings are when people are rusing out the door. On the weekends, the afternoon is when people socialize.
