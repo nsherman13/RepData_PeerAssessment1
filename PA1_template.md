@@ -5,6 +5,7 @@ output: html_document
 ---
 
 ### Loading and preprocessing the data
+
 I loaded knitr as needed and will be using dplyr and ggplot2 for my analysis and visualizations respectively.
 
 
@@ -12,10 +13,10 @@ I loaded knitr as needed and will be using dplyr and ggplot2 for my analysis and
 library(knitr)
 library(dplyr)
 library(ggplot2)
-opts_chunk$set(echo = TRUE,messages = FALSE)
+opts_chunk$set(echo = TRUE)
 ```
 
-I didn't do anything fancy to read the data. I used read.csv and converted data frame into tbl_df for use with the dplyr package. Before converting, I ensured that date column was changed to a date.
+I didn't do anything fancy to read the data. I used read.csv and converted the column for date to be a date.
 
 
 ```r
@@ -32,10 +33,28 @@ raw_data$date <- as.Date(raw_data$date)
 complete_data <- raw_data %>% filter(complete.cases(.))
 ```
 
-Below are the calculated total steps, mean and median per day.
+Below are the calculated total steps per day.
 
 ```r
 total_steps_per_day <- summarise(group_by(complete_data,date), steps = sum(steps))
+total_steps_per_day
+```
+
+```
+## Source: local data frame [53 x 2]
+## 
+##          date steps
+## 1  2012-10-02   126
+## 2  2012-10-03 11352
+## 3  2012-10-04 12116
+## 4  2012-10-05 13294
+## 5  2012-10-06 15420
+## 6  2012-10-07 11015
+## 7  2012-10-09 12811
+## 8  2012-10-10  9900
+## 9  2012-10-11 10304
+## 10 2012-10-12 17382
+## ..        ...   ...
 ```
 
 
@@ -53,18 +72,39 @@ qplot(total_steps_per_day$steps,
 
 ![plot of chunk unnamed-chunk-5](figure/unnamed-chunk-5-1.png) 
 
-Here are the calculated mean and medians steps per day.
+Here are the calculated mean and median total steps per day.
 
 
 ```r
-mean_per_day <- summarise(group_by(complete_data,date),mean(steps))
-median_per_day <- summarise(group_by(complete_data,date), median(steps))
+mean_per_day <- summarise(total_steps_per_day,mean(steps))
+median_per_day <-  summarise(total_steps_per_day,median(steps))
+
+mean_per_day
 ```
+
+```
+## Source: local data frame [1 x 1]
+## 
+##   mean(steps)
+## 1    10766.19
+```
+
+```r
+median_per_day
+```
+
+```
+## Source: local data frame [1 x 1]
+## 
+##   median(steps)
+## 1         10765
+```
+The Mean is 10766 while the Median is 10765.
 
 
 ## What is the average daily activity pattern?
 
-In
+In similar fashion, I grouped data by time interval and calculated the average using the average.
 
 
 ```r
@@ -124,11 +164,34 @@ imputed_data <- mutate(imputed_data,steps = ifelse(is.na(steps),avg,steps))
 
 ```r
 imputed_total_steps_per_day <- summarise(group_by(imputed_data,date), steps = sum(steps))
-imputed_mean_per_day <- summarise(group_by(imputed_data,date),mean(steps))
-imputed_median_per_day <- summarise(group_by(imputed_data,date), median(steps))
+imputed_mean_per_day <- summarise(imputed_total_steps_per_day,mean(steps))
+imputed_median_per_day <-  summarise(imputed_total_steps_per_day,median(steps))
+
+imputed_mean_per_day
 ```
 
+```
+## Source: local data frame [1 x 1]
+## 
+##   mean(steps)
+## 1    10766.19
+```
 
+```r
+imputed_median_per_day
+```
+
+```
+## Source: local data frame [1 x 1]
+## 
+##   median(steps)
+## 1      10766.19
+```
+
+If we take a look at the imputted data, the mean and median are both 10766. This means that only the median changed and slightly. The total must also have gone up as mean stayed the same, but number of days that are part of imputted data set is greater. For example, no data was imputted for 10/01.
+
+
+Here is the histogram showing the imputted dataset. Notice that it is less skewed than the previous one. This intuitively makes sense as we used average per interval to replace NA.s
 
 ```r
 qplot(imputed_total_steps_per_day$steps,
@@ -144,7 +207,7 @@ qplot(imputed_total_steps_per_day$steps,
 
 ![plot of chunk unnamed-chunk-13](figure/unnamed-chunk-13-1.png) 
 
-It seems like imputting the data has lessened the skew of the distribution. Looking at the totals, it seems as if the totals have gone up, while there have been very small changes to the mean and median per day.
+ 
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
